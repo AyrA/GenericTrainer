@@ -10,8 +10,14 @@ namespace GenericTrainer
 {
     class Program
     {
+        /// <summary>
+        /// Enable/Disable DebugLog call
+        /// </summary>
         private static bool Verbose = false;
 
+        /// <summary>
+        /// Exit codes supported by this application
+        /// </summary>
         private enum EXITCODE : int
         {
             /// <summary>
@@ -40,16 +46,43 @@ namespace GenericTrainer
             ACCESS_ERROR = 5
         }
 
+        /// <summary>
+        /// Command line arguments
+        /// </summary>
         private struct Args
         {
+            /// <summary>
+            /// Name of the Process. Is String.Empty if missing.
+            /// </summary>
             public string ProcessName;
+            /// <summary>
+            /// ID of the Process
+            /// </summary>
             public int ProcessId;
+            /// <summary>
+            /// Launch Process instead of finding it
+            /// </summary>
             public bool Launch;
+            /// <summary>
+            /// Show Help
+            /// </summary>
             public bool HelpRequest;
+            /// <summary>
+            /// True, if the arguments were all valid
+            /// </summary>
             public bool Valid;
+            /// <summary>
+            /// True to run only once
+            /// </summary>
             public bool Once;
+            /// <summary>
+            /// Addresses specified
+            /// </summary>
             public Address[] Addresses;
 
+            /// <summary>
+            /// Initializes all values with defaults
+            /// </summary>
             public void Init()
             {
                 ProcessName = string.Empty;
@@ -60,17 +93,50 @@ namespace GenericTrainer
             }
         }
 
+        /// <summary>
+        /// Monitored/Updated Address
+        /// </summary>
         private struct Address
         {
+            /// <summary>
+            /// True, if the Address is a pointer
+            /// </summary>
             public bool IsPointer;
+            /// <summary>
+            /// True if the Address is an offset from base
+            /// </summary>
             public bool IsOffset;
+            /// <summary>
+            /// True if only monitored
+            /// </summary>
             public bool MonitorOnly;
+            /// <summary>
+            /// True, if the value is a reference to another Address value
+            /// </summary>
             public bool IsReference;
+            /// <summary>
+            /// "Deepness" of the pointer stack
+            /// </summary>
             public int PointerLevels;
+            /// <summary>
+            /// Address to monitor/update
+            /// </summary>
             public long MemoryAddress;
+            /// <summary>
+            /// Value (or reference) to store
+            /// </summary>
             public long Value;
+            /// <summary>
+            /// Data type of the value
+            /// </summary>
             public AddressType Type;
 
+            /// <summary>
+            /// Fills the values from a command line argument
+            /// </summary>
+            /// <param name="Line">(Single!) Command line argument</param>
+            /// <returns>True, if valid</returns>
+            /// <remarks>If this returns false, it also calls "Init()"</remarks>
             public bool ParseString(string Line)
             {
                 DebugLog("Processing Address argument: {0}", Line);
@@ -184,6 +250,9 @@ namespace GenericTrainer
                 return true;
             }
 
+            /// <summary>
+            /// Initializes this structure with defaults
+            /// </summary>
             public void Init()
             {
                 MonitorOnly = IsPointer = IsOffset = IsReference = false;
@@ -192,18 +261,38 @@ namespace GenericTrainer
             }
         }
 
+        /// <summary>
+        /// Supported address types
+        /// </summary>
         public enum AddressType : int
         {
+            /// <summary>
+            /// Single byte. This is treated unsigned
+            /// </summary>
             Int8 = 1,
+            /// <summary>
+            /// 2-byte short value
+            /// </summary>
             Int16 = 2,
+            /// <summary>
+            /// 4-byte integer
+            /// </summary>
             Int32 = 3,
+            /// <summary>
+            /// 8-byte long
+            /// </summary>
             Int64 = 4
         }
-
+        
+        /// <summary>
+        /// Main entry point
+        /// </summary>
+        /// <param name="args">Command line arguments</param>
+        /// <returns>Exit code</returns>
         static int Main(string[] args)
         {
 #if DEBUG
-            //Verbose = true;
+            Verbose = true;
             args = new string[] { "brogue-debug.exe", "/O", "+173830=1000", "+173886=R1" };
 #endif
             Args A = new Args();
@@ -321,6 +410,12 @@ namespace GenericTrainer
             return (int)EXITCODE.SUCCESS;
         }
 
+        /// <summary>
+        /// Calculates the real address
+        /// </summary>
+        /// <param name="Addr">Address</param>
+        /// <param name="API">Process API</param>
+        /// <returns>real Address or 0 on error</returns>
         private static int CalculateAddress(Address Addr, WinAPI.ProcessAPI API)
         {
             var P = API.Process;
@@ -346,6 +441,13 @@ namespace GenericTrainer
             return 0;
         }
 
+        /// <summary>
+        /// Updates the Address with the desired value
+        /// </summary>
+        /// <remarks>This will not check for changes and just writes</remarks>
+        /// <param name="References">All addresses (for references)</param>
+        /// <param name="Addr">Address to update</param>
+        /// <param name="API">Process API</param>
         private static void W(Address[] References, Address Addr, WinAPI.ProcessAPI API)
         {
             int A = CalculateAddress(Addr, API);
@@ -378,6 +480,13 @@ namespace GenericTrainer
             }
         }
 
+        /// <summary>
+        /// Reads a value from an Address
+        /// </summary>
+        /// <param name="Addr">Address to read</param>
+        /// <param name="API">Process API</param>
+        /// <returns>Value</returns>
+        /// <remarks>Always returns a long value but will read only bytes as needed</remarks>
         private static long R(Address Addr, WinAPI.ProcessAPI API)
         {
             int A = CalculateAddress(Addr, API);
@@ -401,6 +510,11 @@ namespace GenericTrainer
             }
         }
 
+        /// <summary>
+        /// Shows Process details
+        /// </summary>
+        /// <param name="P">Process</param>
+        /// <returns>True, if successfull</returns>
         private static bool ShowDetails(Process P)
         {
             DebugLog("Showing process details");
@@ -509,6 +623,11 @@ namespace GenericTrainer
             return success;
         }
 
+        /// <summary>
+        /// Processes command line arguments into an "Args" structure
+        /// </summary>
+        /// <param name="Args">Raw Command line arguments</param>
+        /// <returns>Args structure</returns>
         static Args ParseArgs(string[] Args)
         {
             DebugLog("Processing Command line: {0}", string.Join(" :: ", Args));
@@ -598,6 +717,9 @@ namespace GenericTrainer
             return A;
         }
 
+        /// <summary>
+        /// Shows Help
+        /// </summary>
         static void Help()
         {
             Console.Error.WriteLine(@"
@@ -655,6 +777,10 @@ GenericTrainer.exe /L:test.exe +##I:402F #B:85B3E=0x10 +S:10=R1
             Help();
         }
 
+        /// <summary>
+        /// Shows Help and terminates this application
+        /// </summary>
+        /// <param name="ExitCode">ExitCode to send</param>
         static void Help(EXITCODE ExitCode)
         {
             Help();
@@ -666,16 +792,25 @@ GenericTrainer.exe /L:test.exe +##I:402F #B:85B3E=0x10 +S:10=R1
             Environment.Exit((int)ExitCode);
         }
 
+        /// <summary>
+        /// Logs a debug message to STDERR
+        /// </summary>
+        /// <param name="Text">Text</param>
+        /// <param name="Args">Arguments</param>
         static void DebugLog(string Text, params object[] Args)
         {
             DebugLog(string.Format(Text, Args));
         }
 
+        /// <summary>
+        /// Logs a debug message to STDERR
+        /// </summary>
+        /// <param name="Text">Text</param>
         static void DebugLog(string Text)
         {
             if (Verbose)
             {
-                Console.Error.WriteLine(Text);
+                Console.Error.WriteLine("[{0}] {1}", DateTime.Now, Text);
             }
         }
     }
