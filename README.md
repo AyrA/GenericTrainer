@@ -17,7 +17,7 @@ This application allows you to generically set values in a process.
     ProcessName   - Name of the Process. Must end in '.exe' to not be treated as ID
     ProcessId     - ID of the Process
     /L            - Launch the process specified. If the name/path contains spaces, enclose the whole argument with double quotes (including '/L:'). The process is always launched, regardless if an identical instance is already running.
-    Path          - If /L is specified, you can use the fupp/relative path to launch.
+    Path          - If /L is specified, you can use the full/relative path to launch.
     /O            - Run only once and exit. Default is to loop until the target process exits or CTRL+C is hit.
     +             - If present, the region specifies an offset from the base
     #             - If present, the region is treated as a pointer to the location that should be read/written instead. Can be used multiple times for 'stacked' pointers (A pointer list).
