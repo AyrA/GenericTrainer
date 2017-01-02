@@ -32,6 +32,13 @@ This application allows you to generically set values in a process.
 - Multiple regions can be specified to show/update multiple values at once.
 - If a process name is specified and multiple names are found, it will take the one with the highest process ID.
 - The value can be a region reference (see example below) to set it to the same value a read/written region has. Regions are assigned incremental IDs, starting at 1.
+- Addresses are processed in the order they appear on the command line. Making references to later addresses might cause undesired results.
+
+##Warning on /L
+
+`/L` will launch your process in the same userspace as the GenericTrainer executable.
+Since GenericTrainer runs with administrative rights, this will be inherited to the child processes.
+Be careful with that.
 
 ##Example call
 
