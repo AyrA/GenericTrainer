@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Globalization;
 using System.Diagnostics;
+using System.Threading;
 
 namespace GenericTrainer
 {
@@ -202,8 +203,8 @@ namespace GenericTrainer
         static int Main(string[] args)
         {
 #if DEBUG
-            Verbose = true;
-            args = new string[] { "brogue-debug.exe" };
+            //Verbose = true;
+            args = new string[] { "brogue-debug.exe", "/O", "+173830=1000", "+173886=R1" };
 #endif
             Args A = new Args();
             if (args.Length == 0)
@@ -273,7 +274,7 @@ namespace GenericTrainer
                 {
                     //You are very (un-)lucky if you run into this.
                     //It means the process has exited within the last few milliseconds.
-                    //We could be fancy and take the next best result.
+                    //We could be fancy and take the next best result but this might not be what you want anyways.
                     DebugLog("Process has exited while being processed from the list.");
                     Console.Error.WriteLine("The found process has just exited.");
                 }
@@ -288,13 +289,116 @@ namespace GenericTrainer
                     return (int)EXITCODE.ACCESS_ERROR;
                 }
             }
-            //TODO: Address read/write
+
+            P.EnableRaisingEvents = true;
+            P.Exited += delegate { P = null; };
+
+            using (var API = new WinAPI.ProcessAPI(P))
+            {
+                Console.Clear();
+                do
+                {
+                    Console.SetCursorPosition(0, 0);
+                    Console.WriteLine("{0}({1})", P.ProcessName, P.Id);
+                    foreach (var Addr in A.Addresses)
+                    {
+                        if (!Addr.MonitorOnly)
+                        {
+                            W(A.Addresses, Addr, API);
+                        }
+                        Console.WriteLine("0x{0:X8}={1}", Addr.MemoryAddress, R(Addr, API));
+                    }
+                    if (!A.Once)
+                    {
+                        Thread.Sleep(100);
+                    }
+                } while (!A.Once && P != null);
+            }
 #if DEBUG
             Console.Error.WriteLine("#END");
             Console.ReadKey(true);
 #endif
-
             return (int)EXITCODE.SUCCESS;
+        }
+
+        private static int CalculateAddress(Address Addr, WinAPI.ProcessAPI API)
+        {
+            var P = API.Process;
+            if (P != null)
+            {
+                int A = (int)Addr.MemoryAddress;
+                if (Addr.IsOffset)
+                {
+                    DebugLog("Calculating Offset for 0x{0:X8}", A);
+                    A += API.Process.MainModule.BaseAddress.ToInt32();
+                }
+                if (Addr.IsPointer)
+                {
+                    for (int i = 0; i < Addr.PointerLevels; i++)
+                    {
+                        DebugLog("Resolving Pointer 0x{0:X8}", A);
+                        A = API.Read32(A);
+                    }
+                }
+                P.Dispose();
+                return A;
+            }
+            return 0;
+        }
+
+        private static void W(Address[] References, Address Addr, WinAPI.ProcessAPI API)
+        {
+            int A = CalculateAddress(Addr, API);
+            if (A == 0)
+            {
+                return;
+            }
+            long V = Addr.Value;
+            if (Addr.IsReference)
+            {
+                V = R(References[(int)V - 1], API);
+            }
+            DebugLog("Writing {0} to 0x{1:X8}", V, A);
+            switch (Addr.Type)
+            {
+                case AddressType.Int8:
+                    API.Write(A, (byte)V);
+                    break;
+                case AddressType.Int16:
+                    API.Write(A, (short)V);
+                    break;
+                case AddressType.Int32:
+                    API.Write(A, (int)V);
+                    break;
+                case AddressType.Int64:
+                    API.Write(A, V);
+                    break;
+                default:
+                    throw new NotImplementedException("This type is not implemented.");
+            }
+        }
+
+        private static long R(Address Addr, WinAPI.ProcessAPI API)
+        {
+            int A = CalculateAddress(Addr, API);
+            if (A == 0)
+            {
+                return 0L;
+            }
+            DebugLog("Reading value at 0x{0:X8}", A);
+            switch (Addr.Type)
+            {
+                case AddressType.Int8:
+                    return API.Read8(A);
+                case AddressType.Int16:
+                    return API.Read16(A);
+                case AddressType.Int32:
+                    return API.Read32(A);
+                case AddressType.Int64:
+                    return API.Read64(A);
+                default:
+                    throw new NotImplementedException("This type is not implemented.");
+            }
         }
 
         private static bool ShowDetails(Process P)
@@ -497,7 +601,7 @@ namespace GenericTrainer
         static void Help()
         {
             Console.Error.WriteLine(@"
-GenericTrainer.exe <[/L:]ProcessName|ProcessId> [/O]
+GenericTrainer.exe <[/L:]ProcessName|ProcessId> [/V] [/O]
                    [[+][#][Type:]Region[=Value]]
 
 ProcessName   - Name of the Process. Must end in '.exe'
@@ -508,6 +612,7 @@ ProcessId     - ID of the Process
                 with double quotes (including '/L:').
 /O            - Run only once and exit. Default is to loop until the target
                 process exits or CTRL+C is hit.
+/V            - Verbose console output.
 +             - If present, the region specifies an offset from the base
 #             - If present, the region is treated as a pointer to the location
                 That should be read/written instead. Can be used multiple
@@ -534,7 +639,7 @@ Special cases:
 
 Example:
 
-GenericTrainer.exe /L:test.exe +##I:402F #B:85B3E=0x10 +S:0=R1
+GenericTrainer.exe /L:test.exe +##I:402F #B:85B3E=0x10 +S:10=R1
 
 - This will launch 'test.exe'
 - It will monitor the value of the address of the address of the
@@ -542,7 +647,7 @@ GenericTrainer.exe /L:test.exe +##I:402F #B:85B3E=0x10 +S:0=R1
   (This is R1).
 - It will write the byte value 16 to the address '85B3E' points to.
   (This is R2)
-- It will Write the value from R1 to the base address of the process.
+- It will Write the value from R1 to the base address+0x10 of the process.
   This also converts the value from int to short. It will cut off excessive
   bits without rounding or converting. This always assumes signed numbers.
   (This is R3)

@@ -11,7 +11,7 @@ This application allows you to generically set values in a process.
 
 ##Call
 
-    GenericTrainer.exe <[/L:[Path]]ProcessName|ProcessId> [/O]
+    GenericTrainer.exe <[/L:[Path]]ProcessName|ProcessId> [/V] [/O]
                        [[+][#][Type:]Region[=Value]]
 
     ProcessName   - Name of the Process. Must end in '.exe' to not be treated as ID
@@ -19,6 +19,7 @@ This application allows you to generically set values in a process.
     /L            - Launch the process specified. If the name/path contains spaces, enclose the whole argument with double quotes (including '/L:'). The process is always launched, regardless if an identical instance is already running.
     Path          - If /L is specified, you can use the full/relative path to launch.
     /O            - Run only once and exit. Default is to loop until the target process exits or CTRL+C is hit.
+    /V            - Verbose console output.
     +             - If present, the region specifies an offset from the base
     #             - If present, the region is treated as a pointer to the location that should be read/written instead. Can be used multiple times for 'stacked' pointers (A pointer list).
     Region        - Memory address to read/write. Hexadecimal
@@ -34,10 +35,10 @@ This application allows you to generically set values in a process.
 
 ##Example call
 
-    GenericTrainer.exe /L:test.exe +##I:402F #B:85B3E=0x10 +S:0=R1
+    GenericTrainer.exe /L:test.exe +##I:402F #B:85B3E=0x10 +S:10=R1
 
 - This will launch 'test.exe'
 - It will monitor the value of the address of the address of the base address+0x402F as integer. *This is R1*
 - It will write the byte value 16 to the address '85B3E' points to. *This is R2*
-- It will Write the value from R1 to the base address of the process. This also converts the value from int to short. It will cut off excessive bits without rounding or converting. *This is R3*
+- It will Write the value from R1 to the base address+0x10 of the process. This also converts the value from int to short. It will cut off excessive bits without rounding or converting. *This is R3*
 

@@ -114,6 +114,22 @@ namespace WinAPI
 
         #endregion
 
+        public Process Process
+        {
+            get
+            {
+                //Return only a clone
+                try
+                {
+                    return System.Diagnostics.Process.GetProcessById(P.Id);
+                }
+                catch
+                {
+                    return null;
+                }
+            }
+        }
+
         public ProcessAPI(Process P)
         {
             if (P == null)
@@ -124,7 +140,7 @@ namespace WinAPI
             {
                 throw new ArgumentException("The process has exited");
             }
-            this.P = P;
+            this.P = System.Diagnostics.Process.GetProcessById(P.Id);
             Handle = OpenProcess(ProcessAccess.PROCESS_VM_READWRITE, false, P.Id);
             if (Handle == IntPtr.Zero)
             {
