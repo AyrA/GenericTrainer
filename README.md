@@ -1,7 +1,7 @@
-#GenericTrainer
+# GenericTrainer
 provides generic process memory read/write operations
 
-#How to
+# How to
 
 This application is rather simple to use.
 While you can use it to find values in a process (via monitoring),
@@ -9,7 +9,7 @@ it is not the purpose of this.
 This tool assumes you already know the address(es) you want to read/write.
 This application allows you to generically set values in a process.
 
-##Call
+## Call
 
     GenericTrainer.exe <[/L:[Path]]ProcessName|ProcessId> [/V] [/O]
                        [[+][#][Type:]Region[=Value]]
@@ -26,7 +26,8 @@ This application allows you to generically set values in a process.
     Type          - Value type. Supported: L=Int64, I=Int32, S=Int16, B=Int8. This argument defaults to 'I'
     Value         - The value to set. Prefix with '0x' for hexadecimal. You can use negative hexadecimal numbers with '-0x'. You can use a region reference here.
 
-##Notes on arguments
+## Notes on arguments
+
 - If only the process name or id is supplied, it will show some information. This always exits immediately (/O is not required). Warning! If you use /L with this, it will launch the Process and leave it running 'as-is'.
 - If no value is specified for a region, that region is just shown.
 - Multiple regions can be specified to show/update multiple values at once.
@@ -34,13 +35,13 @@ This application allows you to generically set values in a process.
 - The value can be a region reference (see example below) to set it to the same value a read/written region has. Regions are assigned incremental IDs, starting at 1.
 - Addresses are processed in the order they appear on the command line. Making references to later addresses might cause undesired results.
 
-##Warning on /L
+## Warning on /L
 
 `/L` will launch your process in the same userspace as the GenericTrainer executable.
 Since GenericTrainer runs with administrative rights, this will be inherited to the child processes.
 Be careful with that.
 
-##Example call
+## Example call
 
     GenericTrainer.exe /L:test.exe +##I:402F #B:85B3E=0x10 +S:10=R1
 
